@@ -1,0 +1,125 @@
+#include <stdio.h>
+#include <inttypes.h>
+#include <errno.h>
+#include <sys/fcntl.h>
+#include <sys/unistd.h>
+#include <lwip/sockets.h>
+
+#include "sdkconfig.h"
+#include "driver/gpio.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+#include "esp_chip_info.h"
+#include "esp_flash.h"
+#include "esp_system.h"
+#include "esp_log.h"
+
+#include "driver/uart.h"
+#include "driver/uart_vfs.h"
+#include "esp_timer.h"
+
+
+
+// Ultrasonic sensor pins
+#define TRIGGER_PIN_1 18           // GPIO pin for Trigger 1
+#define ECHO_PIN_1 19              // GPIO pin for Echo 1
+
+#define TRIGGER_PIN_2 14			   // GPIO pin for Trigger 2
+#define ECHO_PIN_2 12			   // GPIO pin for Echo 2
+
+
+void ultrasonic_1(void) {
+	int gpio_pad_select_gpio();
+    gpio_pad_select_gpio(TRIGGER_PIN_1); // initializing gpio pin 18 - trigger pin of hcsr04
+    gpio_set_direction(TRIGGER_PIN_1, GPIO_MODE_OUTPUT); // setting trigger pin as an output
+    
+    
+    gpio_pad_select_gpio(ECHO_PIN_1); // initializing gpio pin 19 - echo pin of hcsr04
+    gpio_set_direction(ECHO_PIN_1, GPIO_MODE_INPUT); // setting echo pin as an input
+
+}
+
+void ultrasonic_2(void){
+	
+	int gpio_pad_select_gpio();
+	gpio_pad_select_gpio(TRIGGER_PIN_2); // initializing gpio pin 9 - trigger pin of hcsr04
+    gpio_set_direction(TRIGGER_PIN_2, GPIO_MODE_OUTPUT); // setting trigger pin as an output
+    
+    
+    gpio_pad_select_gpio(ECHO_PIN_2); // initializing gpio pin 10 - echo pin of hcsr04
+    gpio_set_direction(ECHO_PIN_2, GPIO_MODE_INPUT); // setting echo pin as an input   
+    
+}
+
+// generic function used to measure distance using ultrasonic sensor and gpio pins
+float get_distance_1(void) { // function to obtain distance for 1st ultrasonic sensor
+
+    gpio_set_level(TRIGGER_PIN_1, 0);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+    gpio_set_level(TRIGGER_PIN_1, 1);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    gpio_set_level(TRIGGER_PIN_1, 0);
+
+    int64_t start_time = esp_timer_get_time();
+    while (gpio_get_level(ECHO_PIN_1) == 0) {
+        start_time = esp_timer_get_time();
+    }
+
+    int64_t end_time = esp_timer_get_time();
+    while (gpio_get_level(ECHO_PIN_1) == 1) {
+        end_time = esp_timer_get_time();
+    }
+
+    int64_t time_diff = end_time - start_time;
+    float distance = (time_diff * 0.0343) / 2;  // Convert time to distance
+    return distance;
+}
+
+float get_distance_2(void) { // function to obtain distance for 2nd ultrasonic sensor
+    gpio_set_level(TRIGGER_PIN_2, 0);
+    vTaskDelay(2 / portTICK_PERIOD_MS);
+    gpio_set_level(TRIGGER_PIN_2, 1);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    gpio_set_level(TRIGGER_PIN_2, 0);
+
+    int64_t start_time = esp_timer_get_time();
+    while (gpio_get_level(ECHO_PIN_2) == 0) {
+        start_time = esp_timer_get_time();
+    }
+
+    int64_t end_time = esp_timer_get_time();
+    while (gpio_get_level(ECHO_PIN_2) == 1) {
+        end_time = esp_timer_get_time();
+    }
+
+    int64_t time_diff = end_time - start_time;
+    float distance = (time_diff * 0.0343) / 2;  // Convert time to distance
+    return distance;
+}
+
+
+void app_main(void) {
+	
+	printf("we are just testing if there is any form of output before while loop\n");
+	ultrasonic_1();
+	ultrasonic_2();
+	
+	int time_passed;
+	float distance_1;
+	float distance_2;
+	for (time_passed = 0; time_passed < 10; time_passed++){
+			
+		distance_1 = get_distance_1();
+		distance_2 = get_distance_2();
+		printf("This is the distance away from object for HCSO4 sample 1 %f\n",distance_1);
+		printf("Break\n");
+		printf("This is the distance away from object for HCSO4 sample 2 %f\n",distance_2);
+		vTaskDelay(pdMS_TO_TICKS(2000));
+		
+	}
+	
+	
+}
+
+
