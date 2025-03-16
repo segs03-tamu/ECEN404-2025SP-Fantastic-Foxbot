@@ -23,7 +23,7 @@ static const char *TAGG = "ESP32_MAVLINK";
 
 void init_uart(void) {
     uart_config_t uart_config = {
-        .baud_rate = 115200,
+        .baud_rate = 57600,
         .data_bits = UART_DATA_8_BITS,
         .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
@@ -34,6 +34,34 @@ void init_uart(void) {
     uart_driver_install(UART_NUM, 1024, 0, 0, NULL, 0);
     
     ESP_LOGI(TAGG, "UART initialized");
+}
+
+void send_heartbeat(void) {
+    mavlink_message_t msg;
+    uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+    
+    mavlink_msg_heartbeat_pack(
+        ESP_SYSTEM_ID,                // System ID
+        MAV_COMP_ID,                  // Component ID
+        &msg,
+        MAV_TYPE_GCS,                 // Type: Ground Control Station
+        MAV_AUTOPILOT_INVALID,        // Autopilot: Not applicable for GCS
+        MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, // Base mode: Custom mode enabled
+        0,                            // Custom mode: 0 for GCS
+        MAV_STATE_ACTIVE              // System state: Active
+    );
+    
+    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+    uart_write_bytes(UART_NUM, buf, len);
+    
+    ESP_LOGD(TAGG, "Sent MAVLink heartbeat");
+}
+
+void heartbeat_task(void *pvParameters) {
+    while (1) {
+        send_heartbeat();
+        vTaskDelay(1000 / portTICK_PERIOD_MS); // Send heartbeat every 1 second
+    }
 }
 
 
