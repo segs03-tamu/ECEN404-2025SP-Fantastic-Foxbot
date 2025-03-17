@@ -64,7 +64,7 @@ void heartbeat_task(void *pvParameters) {
     }
 }
 
-void handle_heartbeat(const mavlink_heartbeat_t *heartbeat) {
+void receive_heartbeat(const mavlink_heartbeat_t *heartbeat) {
     uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
     bool was_connected = pixhawk_connected;
     
