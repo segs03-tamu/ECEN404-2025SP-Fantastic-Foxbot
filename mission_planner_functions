@@ -64,6 +64,31 @@ void heartbeat_task(void *pvParameters) {
     }
 }
 
+void handle_heartbeat(const mavlink_heartbeat_t *heartbeat) {
+    uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+    bool was_connected = pixhawk_connected;
+    
+    // Update connection status
+    pixhawk_connected = true;
+    last_pixhawk_heartbeat = now;
+    
+    // Log connection establishment
+    if (!was_connected) {
+        ESP_LOGI(TAGG, "PIXHAWK CONNECTION ESTABLISHED");
+    }
+    
+    // Display heartbeat information every 15 second
+    static uint32_t last_heartbeat_display = 0;
+    if (now - last_heartbeat_display > 15000) {
+
+        ESP_LOGI(TAGG, "Mode: %s", get_mode_string(heartbeat->custom_mode));
+        ESP_LOGI(TAGG, "Status: %s", get_system_status_string(heartbeat->system_status));
+        ESP_LOGI(TAGG, "Type: %d, Autopilot: %d", heartbeat->type, heartbeat->autopilot);
+        ESP_LOGI(TAGG, "Base Mode: 0x%02X", heartbeat->base_mode);
+        
+        last_heartbeat_display = now;
+    }
+}
 
 void send_command_long(uint16_t command, float param1, float param2, float param3, 
                        float param4, float param5, float param6, float param7) {
