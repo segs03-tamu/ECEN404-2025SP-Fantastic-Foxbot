@@ -146,36 +146,36 @@ static esp_err_t i2c_master_read_slave_reg(i2c_port_t i2c_num, uint8_t i2c_addr,
  * --------|---------------------------|----------------|----------------------|------|
  *
  */
-static esp_err_t i2c_master_write_slave_reg(i2c_port_t i2c_num, uint8_t i2c_addr, uint8_t i2c_reg, uint8_t* data_wr, size_t size) {
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
+static esp_err_t i2c_master_write_slave_reg(i2c_port_t i2c_num, uint8_t i2c_addr, uint8_t i2c_reg, uint8_t* data_wr, size_t size) { // Function to write data to a slave device's register over I2C
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create(); // Create a new I2C command link (a sequence of I2C operations)
+    i2c_master_start(cmd); // Generate START condition on I2C bus (beginning of transaction)
 
     // Log the write operation details
-    ESP_LOGI(TAG, "Writing to I2C device: 0x%02X", i2c_addr);
-    ESP_LOGI(TAG, "Register address: 0x%02X", i2c_reg);
-    ESP_LOGI(TAG, "Data to write: 0x%02X", *data_wr);
+    ESP_LOGI(TAG, "Writing to I2C device: 0x%02X", i2c_addr); // - Device address being written to
+    ESP_LOGI(TAG, "Register address: 0x%02X", i2c_reg); // - Register address being written
+    ESP_LOGI(TAG, "Data to write: 0x%02X", *data_wr); // - First byte of data being written (helpful for debugging)
 
     // Send device address + write bit
-    i2c_master_write_byte(cmd, (i2c_addr << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
+    i2c_master_write_byte(cmd, (i2c_addr << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);  // ACK_CHECK_EN enables checking for slave's acknowledge
 
-    // Send register address
-    i2c_master_write_byte(cmd, i2c_reg, ACK_CHECK_EN);
+    
+    i2c_master_write_byte(cmd, i2c_reg, ACK_CHECK_EN); // Send register address
 
-    // Write the data
-    i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
+    
+    i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN); // Write the data
 
-    i2c_master_stop(cmd);
+    i2c_master_stop(cmd); // Generate STOP condition (ends the transaction and releases the bus)
 
     // Execute the I2C command
-    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_PERIOD_MS);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "I2C write failed: %s", esp_err_to_name(ret));
-    } else {
-        ESP_LOGI(TAG, "I2C write successful");
+    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_PERIOD_MS); // Execute the I2C commands with a timeout of 1000ms
+    if (ret != ESP_OK) { // Error handling: Log if the operation failed
+        ESP_LOGE(TAG, "I2C write failed: %s", esp_err_to_name(ret)); //output
+    } else { //or
+        ESP_LOGI(TAG, "I2C write successful"); //good communication
     }
 
-    i2c_cmd_link_delete(cmd);
-    return ret;
+    i2c_cmd_link_delete(cmd); // Free the resources used by the command link
+    return ret; // Return the status of the I2C operation (ESP_OK on success)
 }
 
 /* Read contents of a register
