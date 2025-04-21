@@ -551,8 +551,6 @@ void setup_uart() {
 }
 
 
-
-
 // Function to run to have all componets initalize correctly 
 void every_init(){
     
@@ -737,10 +735,12 @@ bool get_BM_Stat(){
     // Read SYS_STAT register and adds to stat decimal 
     stat += (int)((read_register(SYS_STAT) >> 4) & 0x0F);
 
+    /*
     // Set SDA line to BM2
     i2c_set_sda(I2C_SDA_BM2);
     // Read SYS_STAT register and adds to stat decimal 
     stat += (int)((read_register(SYS_STAT) >> 4) & 0x0F);
+    */
     /*
     i2c_set_sda(I2C_SDA_BM3);
     stat += (int)((read_register(SYS_STAT) >> 4) & 0x0F);
@@ -825,8 +825,7 @@ bool obj_detect(){
     return false;
 }
 
-
-    
+   
 // Note structure: Frequency in Hz, Duration in milliseconds
 typedef struct {
     int frequency;
@@ -886,6 +885,13 @@ Note melody2[] = {
     //{ 660, 200 }, { 880, 200 }, { 1100, 300 }
 };
 
+// Melody generated for recieving signal 
+Note melody3[] = {
+    { 932, 150 }, { 1245, 150}, { 1864, 150}
+    
+    //{ 660, 200 }, { 880, 200 }, { 1100, 300 }
+};
+
 // Play melody 2
 void play_music2(){
     
@@ -898,47 +904,31 @@ void play_music2(){
 
 }
 
+// Play melody 2
+void play_music3(){
+    
+    
+    int numNotes = sizeof(melody3) / sizeof(melody3[0]);
+    for (int i = 0; i < numNotes; i++) {
+        playTone(melody3[i].frequency, melody3[i].duration);
+        vTaskDelay(pdMS_TO_TICKS(50)); // Small pause between notes
+    }
 
-void send_motor_command(uint8_t command) {
-    uart_write_bytes(UART_NUM, (const char *)&command, 1);  // Send single-byte command
 }
 
-void move_forward(int speed, int duration){ // basic commmand to direct the bot to move forward - also fixes timing issues with motores
-    send_motor_command(speed+64); // moves motor 1 
-    send_motor_command(speed+192); // moves motor 2
-    vTaskDelay(pdMS_TO_TICKS(duration));
-}
 
-void move_backward(int speed, int duration){ // same style of command as move_foward
-    send_motor_command(64-speed);
-    send_motor_command(192-speed);
-    vTaskDelay(pdMS_TO_TICKS(duration));
-}
-
-void VTask_Drive_F(void *pvParameters){
-    // put this into one of the button setups
-    move_forward(30, 10000); // moves bot forward at level 3 speed for 10 seconds
-    send_motor_command(0x00); // stops both motors after 10 seconds
-}
 
 // Flag variable to store detected action number
 volatile int bit_action_flag = -1;
 
 // Hold previous value of the Bit flag
-volatile int bit_prev_flag = 1;
+volatile int bit_prev_flag = -1;
 
-volatile int count = 1;
+
 // Monitor Bits of gpio pins and determine if the reading is accurate and set a flag for trigger
 void vTask_HealthMode(void *pvParameters) {
     // Internal count variable for the number of times read the same value
     
-
-    // Decimal Value to represent the value of the bits in decimal
-    int decimal_value = 0;
-
-    // Variable responsible for holding the last value of the decimal value
-    int prev_decimal_value = -1;
-
     // Infinte while to loop till an action flag is triggered
     while (1) {
             
@@ -947,11 +937,11 @@ void vTask_HealthMode(void *pvParameters) {
 
             // if condition that checks to see if bit_action_flag needs to be set 
             // checks if the previous flag is not the same as current, dont do action on zero, and make sure there was a count of 3
-            if(bit_prev_flag != bit_action_flag){
+            if((bit_prev_flag != bit_action_flag) && !(bit_action_flag == 10)){
                 // set bit flag to the new decimal value
                 char message[20];  // Adjust the size as needed
                 gpio_set_level(PTT, 1);
-                play_music2();
+                playMorseString("Recieved", FREQUENCY);
                 vTaskDelay(pdMS_TO_TICKS(1000));
                 call_sign();
                 gpio_set_level(PTT, 0);
@@ -971,8 +961,6 @@ void vTask_HealthMode(void *pvParameters) {
                     playMorseString("Mode 1 Start", FREQUENCY);
                     vTaskDelay(pdMS_TO_TICKS(1000));
 
-                    // Call sign
-                    call_sign();
 
                     // Disable Push to talk
                     gpio_set_level(PTT, 0);
@@ -980,7 +968,7 @@ void vTask_HealthMode(void *pvParameters) {
                     
                     // ***************************************** //
                     // Send are to pixhawk to start movement on path
-                    //send_arm_disarm(true); 
+                    send_arm_disarm(true); 
                     // Check if pixhawk is working and on
 
                     
@@ -988,19 +976,19 @@ void vTask_HealthMode(void *pvParameters) {
                     for(int i=0; i<5; ++i){
                         // Enable Push to talk 
                         gpio_set_level(PTT, 1);
-                        playMorseString("Hello", FREQUENCY);
+                        playMorseString("Hello Catch Me", FREQUENCY);
                         vTaskDelay(pdMS_TO_TICKS(1000));
                         
                         gpio_set_level(PTT, 0);
                         printf("\n");
-                        vTaskDelay(pdMS_TO_TICKS(5000)); 
+                        vTaskDelay(pdMS_TO_TICKS(10000)); 
                     }
                     gpio_set_level(PTT, 1);
                     call_sign();
                     gpio_set_level(PTT, 0);
                     
-                    //vTaskDelay(pdMS_TO_TICKS(15000)); 
-                    //send_arm_disarm(false); 
+                    vTaskDelay(pdMS_TO_TICKS(1000)); 
+                    send_arm_disarm(false); 
                     vTaskDelay(pdMS_TO_TICKS(5000));  
 
                     /*
@@ -1020,8 +1008,7 @@ void vTask_HealthMode(void *pvParameters) {
                     playMorseString("Mode 2 Start", FREQUENCY);
                     vTaskDelay(pdMS_TO_TICKS(1000));
 
-                    // Call sign
-                    call_sign();
+                    
 
                     // Disable Push to talk
                     gpio_set_level(PTT, 0);
@@ -1030,39 +1017,57 @@ void vTask_HealthMode(void *pvParameters) {
                     // Loop to repeat signal ON and OFF
                     for(int i=0; i<5; ++i){
 
-                        
-
                         // Enable Push to talk 
                         gpio_set_level(PTT, 1);
-                        playMorseString("Hello", FREQUENCY);
+                        playMorseString("Hello Catch Me", FREQUENCY);
                         vTaskDelay(pdMS_TO_TICKS(1000));
-                        call_sign();
+                        
                         gpio_set_level(PTT, 0);
                         printf("\n");
-
-                        vTaskDelay(pdMS_TO_TICKS(5000)); 
+                        vTaskDelay(pdMS_TO_TICKS(10000)); 
                     }
-                    vTaskDelay(pdMS_TO_TICKS(5000));  
 
+                    gpio_set_level(PTT, 1);
+                    call_sign();
+                    gpio_set_level(PTT, 0);
 
-                    /*
-                    vTaskDelay(pdMS_TO_TICKS(8000));  
-                    printf("Mode 2 Activated \n");
-                    send_arm_disarm(false);
-                    playMorseString("PIXDISARMED", FREQUENCY);   
-                    */          
+                    vTaskDelay(pdMS_TO_TICKS(5000));          
                        
                 }
-                else if(bit_action_flag == 5){      
-                    printf("blank spot");
+                else if(bit_action_flag == 5){  
+                    printf("Mode 5 Activated: Intermittant PTT, Intermittent movement\n");
+
+                    // Enable push to talk
+                    gpio_set_level(PTT, 1);
+
+                    // Tell user Mode 1 was started
+                    playMorseString("Mode 5 Start", FREQUENCY);
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+
+                    // Disable Push to talk
+                    gpio_set_level(PTT, 0);
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+
+                    // Loop to repeat signal ON and OFF
+                    for(int i=0; i<5; ++i){
+
+                        send_arm_disarm(true); 
+                        // Enable Push to talk 
+                        gpio_set_level(PTT, 1);
+                        playMorseString("Hello Catch Me", FREQUENCY);
+                        vTaskDelay(pdMS_TO_TICKS(1000));
+                        
+                        gpio_set_level(PTT, 0);
+                        printf("\n");
+                        send_arm_disarm(false); 
+                        vTaskDelay(pdMS_TO_TICKS(10000)); 
+                    }
+                    vTaskDelay(pdMS_TO_TICKS(5000));     
                     vTaskDelay(pdMS_TO_TICKS(3000));
                 }
                 else if(bit_action_flag == 3){      
                     printf("Mode 3 Activated: Constant transmission and NO Movement\n");
-                    //move_forward(45, 5000); // moves bot forward at level 3 speed for 10 seconds
-                    //send_motor_command(0x00); // stops both motors after 10 seconds
-                    //xTaskCreate(VTask_Drive_F, "Drive Forward", 1024, NULL, 5, &xTaskBitMonitor);
-
+                    
                     // Enable push to talk
                     gpio_set_level(PTT, 1);
 
@@ -1080,6 +1085,9 @@ void vTask_HealthMode(void *pvParameters) {
                     gpio_set_level(PTT, 1); 
                     play_music();
                     vTaskDelay(pdMS_TO_TICKS(2000));
+                    play_music();
+                    vTaskDelay(pdMS_TO_TICKS(2000));
+                    play_music();
                     call_sign();
                     gpio_set_level(PTT, 0); 
                     vTaskDelay(pdMS_TO_TICKS(5000));   
@@ -1104,24 +1112,30 @@ void vTask_HealthMode(void *pvParameters) {
                     vTaskDelay(pdMS_TO_TICKS(1000));
 
                     // Send are to pixhawk to start movement on path
-                    //send_arm_disarm(true); 
+                    send_arm_disarm(true); 
                     // Check if pixhawk is working and on
-                    // Loop to repeat signal ON and OFF
+                    
                     
                     // Disable Push to talk
                     gpio_set_level(PTT, 0);
                     vTaskDelay(pdMS_TO_TICKS(3000));
                     
                     gpio_set_level(PTT, 1); 
+                    printf("Starting Music \n");
                     play_music();
-                    vTaskDelay(pdMS_TO_TICKS(2000));
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                    printf("Second Iteration \n");
+                    play_music();
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                    printf("Third Iteration \n");
+                    play_music();
                     call_sign();
                     gpio_set_level(PTT, 0); 
+                    // Send are to pixhawk to stop movement 
+                    send_arm_disarm(false); 
                     vTaskDelay(pdMS_TO_TICKS(5000)); 
 
-                    // Send are to pixhawk to stop movement 
-                    //send_arm_disarm(false); 
-                    vTaskDelay(pdMS_TO_TICKS(5000));  
+
                 }
                 else if(bit_action_flag == 6){      
                     // Only does BM1 right now
@@ -1136,6 +1150,7 @@ void vTask_HealthMode(void *pvParameters) {
 
                     vTaskDelay(pdMS_TO_TICKS(1000));
 
+                    /*
                     // Only does BM1 right now
                     i2c_set_sda(I2C_SDA_BM2);
                     snprintf(message, sizeof(message), "%.2f", get_BAT_VOLT());
@@ -1144,7 +1159,7 @@ void vTask_HealthMode(void *pvParameters) {
                     strcat(tot_mess,  message); 
 
                     vTaskDelay(pdMS_TO_TICKS(1000));
-                    /*
+                    
                     // Only does BM1 right now
                     i2c_set_sda(I2C_SDA_BM3);
                     snprintf(message, sizeof(message), "%.2f", get_BAT_VOLT());
@@ -1160,7 +1175,7 @@ void vTask_HealthMode(void *pvParameters) {
                     vTaskDelay(pdMS_TO_TICKS(1000));
 
                 }
-                else if(bit_action_flag == 7){      
+                else if(bit_action_flag == 8){      
                     printf("This is GPS coordinates \n");
                     receive_mavlink_task();
                     // ******** NEED TO PUT CALL SIGN
@@ -1168,7 +1183,7 @@ void vTask_HealthMode(void *pvParameters) {
 
 
                 }
-                else if(bit_action_flag == 8){      
+                else if(bit_action_flag == 7){      
                     printf("This is ultrasonic sensor \n");
                     if(obj_detect()){
                         playMorseString("OBJ Detect", FREQUENCY);
@@ -1178,7 +1193,7 @@ void vTask_HealthMode(void *pvParameters) {
                     }
                 }
                 else if(bit_action_flag == 9){      
-                    printf("OFF");
+                    printf("OFF \n");
                     gpio_set_level(PTT, 1); 
                     playMorseString("Turning OFF", FREQUENCY);
                     send_arm_disarm(false);
@@ -1192,6 +1207,12 @@ void vTask_HealthMode(void *pvParameters) {
         
                 // Wait time
                 printf("This is back in health mode \n");
+                // Turns on PTT
+                gpio_set_level(PTT, 1);
+                playMorseString("H mode", FREQUENCY);
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                call_sign();
+                gpio_set_level(PTT, 0);
                 vTaskDelay(pdMS_TO_TICKS(5000));
             
                 // Store value of action flag in a previous flag 
@@ -1205,12 +1226,10 @@ void vTask_HealthMode(void *pvParameters) {
 }
 
 
-
-
 void app_main(void)
 {    
       
-    bool flag;
+    bool flag = false;
     char message[20];
     int val =0;
     bit_init();
@@ -1227,6 +1246,13 @@ void app_main(void)
     vTaskDelay(pdMS_TO_TICKS(5000));
     // Intialize everything we need
     every_init();
+
+    
+    gpio_set_level(PTT, 1);
+    playMorseString("Recieved", FREQUENCY);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    gpio_set_level(PTT, 0);
+    
 
     if(get_BM_Stat()){
         printf("Battery Monitor System is good \n");
@@ -1254,38 +1280,13 @@ void app_main(void)
     }
 
     
-    
-    /*
-    if(get_BM_Stat()){
-        printf("Battery Monitor System is good \n");
-        gpio_set_level(PTT, 1);
-        
-        playMorseString("BM Good", FREQUENCY);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        call_sign();
-        gpio_set_level(PTT, 0);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    
-    }
-    else{
-        printf("Battery Monitor System is Bad \n");
-        gpio_set_level(PTT, 1);
-        
-        playMorseString("BM Bad", FREQUENCY);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        call_sign();
-        gpio_set_level(PTT, 0);
-
-
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }*/
 
     if(!flag){
         // arm pixhawk and wait till at home point 
         xTaskCreate(vTask_HealthMode, "Bit Monitor Task", 8192, NULL, 5, &xTaskBitMonitor);
     }
     else{
-        while(1){
+        for(int i=0; i<5; ++i){
             gpio_set_level(PTT, 1);
         
             playMorseString("System Error!!!!!", FREQUENCY);
