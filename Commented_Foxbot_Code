@@ -193,43 +193,43 @@ esp_err_t wrAFE( uint8_t reg, uint8_t *pdata, uint8_t count ) //setting up varia
 }
 
 
-void wake_up_bq76920() {
-    gpio_set_direction(TS1_GPIO, GPIO_MODE_OUTPUT);
+void wake_up_bq76920() { // Function to wake up the BQ76920 battery monitor IC by sending a pulse on TS1 pin
+    gpio_set_direction(TS1_GPIO, GPIO_MODE_OUTPUT);  // Configure the TS1 GPIO pin as an output
 
     // Ensure TS1 is LOW initially
-    gpio_set_level(TS1_GPIO, 0);
+    gpio_set_level(TS1_GPIO, 0); // Set TS1 pin to LOW (logic level 0) to establish initial state
     vTaskDelay(pdMS_TO_TICKS(50));  // Wait 50ms
 
     // Create a rising edge by setting TS1 HIGH
-    gpio_set_level(TS1_GPIO, 1);
+    gpio_set_level(TS1_GPIO, 1); // Maintain HIGH state for 50 milliseconds (pulse width)
     vTaskDelay(pdMS_TO_TICKS(50));  // Wait 50ms
 
-    ESP_LOGI("BQ76920", "Wake-up pulse sent to TS1");
+    ESP_LOGI("BQ76920", "Wake-up pulse sent to TS1");  // Log successful wake-up pulse transmission
 }
 
-void test_write_and_verify() {
+void test_write_and_verify() { // Function to test writing to and reading back from a register (CC_CFG) to verify proper I2C communication
     uint8_t data_to_write = 0x19;  // Example data to write
-    uint8_t read_data = 0;
+    uint8_t read_data = 0; // Buffer to store read-back data (initialized to 0 for safety)
 
     // Write to CC_CFG
-    esp_err_t err = wrAFE(CC_CFG, &data_to_write, 1);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to write to CC_CFG: %s", esp_err_to_name(err));
-        return;
+    esp_err_t err = wrAFE(CC_CFG, &data_to_write, 1); // Write the test data to CC_CFG register using wrAFE function
+    if (err != ESP_OK) { // Check if write operation failed
+        ESP_LOGE(TAG, "Failed to write to CC_CFG: %s", esp_err_to_name(err)); // Log error with details if write failed
+        return; // Exit function early on failure
     }
 
     // Read back from CC_CFG
-    err = rdAFE(CC_CFG, &read_data, 1);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to read from CC_CFG: %s", esp_err_to_name(err));
-        return;
+    err = rdAFE(CC_CFG, &read_data, 1); / Read back from the same CC_CFG register using rdAFE function
+    if (err != ESP_OK) { // Check if read operation failed
+        ESP_LOGE(TAG, "Failed to read from CC_CFG: %s", esp_err_to_name(err)); // Log error with details if read failed
+        return; // Exit function early on failure
     }
 
     // Verify the written value
-    if (read_data == data_to_write) {
-        ESP_LOGI(TAG, "Write verified successfully. CC_CFG value: 0x%02X", read_data);
-    } else {
-        ESP_LOGE(TAG, "Write verification failed. Expected: 0x%02X, Actual: 0x%02X", data_to_write, read_data);
+    if (read_data == data_to_write) { // Compare read-back value with originally written value
+        ESP_LOGI(TAG, "Write verified successfully. CC_CFG value: 0x%02X", read_data); // Success case - log the verified value
+    } else { //or 
+        ESP_LOGE(TAG, "Write verification failed. Expected: 0x%02X, Actual: 0x%02X", data_to_write, read_data); // Failure case - log both expected and actual values
     }
 }
 
