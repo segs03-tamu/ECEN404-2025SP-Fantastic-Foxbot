@@ -180,16 +180,16 @@ static esp_err_t i2c_master_write_slave_reg(i2c_port_t i2c_num, uint8_t i2c_addr
 
 /* Read contents of a register
 ---------------------------------------------------------------------------*/
-esp_err_t rdAFE( uint8_t reg, uint8_t *pdata, uint8_t count )
+esp_err_t rdAFE( uint8_t reg, uint8_t *pdata, uint8_t count ) //setting up variables to read in the register
 {
-	return( i2c_master_read_slave_reg(I2C_PORT_NUM, BQ7692003PWR_I2C_ADDR,  reg, pdata, count ) );
+	return( i2c_master_read_slave_reg(I2C_PORT_NUM, BQ7692003PWR_I2C_ADDR,  reg, pdata, count ) ); //returning what is read
 }
 
 /* Write value to specified register
 ---------------------------------------------------------------------------*/
-esp_err_t wrAFE( uint8_t reg, uint8_t *pdata, uint8_t count )
+esp_err_t wrAFE( uint8_t reg, uint8_t *pdata, uint8_t count ) //setting up variables to write in the register
 {
-	return( i2c_master_write_slave_reg( I2C_PORT_NUM, BQ7692003PWR_I2C_ADDR,  reg, pdata, count ) );
+	return( i2c_master_write_slave_reg( I2C_PORT_NUM, BQ7692003PWR_I2C_ADDR,  reg, pdata, count ) ); //returning what is read
 }
 
 
