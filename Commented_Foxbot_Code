@@ -409,14 +409,14 @@ void trans_init() { // function definiition
 }
 
 // Play a Morse code symbol (dot or dash)
-void playMorseSymbol(const char symbol, int frequency) {
-    int duration = (symbol == '.') ? DOT_DURATION : DASH_DURATION;
+void playMorseSymbol(const char symbol, int frequency) { // fucntion definition
+    int duration = (symbol == '.') ? DOT_DURATION : DASH_DURATION; // defining the dot 
     int delayTime = 1000000 / (frequency * SINE_RESOLUTION); // Microseconds per step
 
     // Turn on LED and play sine wave for the duration of the symbol
     gpio_set_level(LED_PIN, 1); // Set LED pin high
-    for (int t = 0; t < duration; t += delayTime) {
-        for (int i = 0; i < SINE_RESOLUTION; i++) {
+    for (int t = 0; t < duration; t += delayTime) { //the time of playing
+        for (int i = 0; i < SINE_RESOLUTION; i++) { // generating the tone
             dac_output(sineTable[i]); // Output sine wave
             vTaskDelay(pdMS_TO_TICKS(delayTime / 1000)); // Delay for frequency control
         }
@@ -424,76 +424,76 @@ void playMorseSymbol(const char symbol, int frequency) {
     gpio_set_level(LED_PIN, 0); // Set LED pin low
 
     // Silence for the space between parts of the same letter
-    vTaskDelay(pdMS_TO_TICKS(PART_SPACE_DURATION));
+    vTaskDelay(pdMS_TO_TICKS(PART_SPACE_DURATION)); // pause for between each character
 }
 
 // Play a Morse code letter
-void playMorseLetter(const char *code, char letter, int frequency) {
+void playMorseLetter(const char *code, char letter, int frequency) { //function definition
     // Print the letter and its Morse code
-    printf("Letter: %c, Morse Code: %s\n", letter, code);
+    printf("Letter: %c, Morse Code: %s\n", letter, code); // printing out the letter
 
-    while (*code) {
+    while (*code) { //function definition
         //printf("%c ", *code); // Print each Morse symbol (dot or dash)
-        playMorseSymbol(*code, frequency);
-        code++;
+        playMorseSymbol(*code, frequency); //morse output
+        code++; //next
     }
     
 }
 
 // Play a Morse code string
-void playMorseString(const char *text, int frequency) {
-    while (*text) {
-        if (*text == ' ') {
+void playMorseString(const char *text, int frequency) { // function definition
+    while (*text) { //for the length of the text
+        if (*text == ' ') { //function definition
             // Space between words
-            printf("  (Word Space)\n");
-            vTaskDelay(pdMS_TO_TICKS(WORD_SPACE_DURATION));
+            printf("  (Word Space)\n"); // print out the text
+            vTaskDelay(pdMS_TO_TICKS(WORD_SPACE_DURATION)); //delay until next character
         } else {
             // Get Morse code for the character
-            int index = (*text >= 'A' && *text <= 'Z') ? *text - 'A' :
-                        (*text >= 'a' && *text <= 'z') ? *text - 'a' :
-                        (*text >= '0' && *text <= '9') ? *text - '0' + 26:
-                        (*text == '.') ? 36 :
-                        -1;
-            if (index >= 0) {
-                playMorseLetter(morseCode[index], *text, frequency);
+            int index = (*text >= 'A' && *text <= 'Z') ? *text - 'A' : // upper case
+                        (*text >= 'a' && *text <= 'z') ? *text - 'a' : // lower case
+                        (*text >= '0' && *text <= '9') ? *text - '0' + 26: //not a letter
+                        (*text == '.') ? 36 : // a period
+                        -1; //false
+            if (index >= 0) { //function definition
+                playMorseLetter(morseCode[index], *text, frequency); //sine generator for the morse 
                 // Space between letters
-                vTaskDelay(pdMS_TO_TICKS(LETTER_SPACE_DURATION));
+                vTaskDelay(pdMS_TO_TICKS(LETTER_SPACE_DURATION)); //time between each character
             }
         }
-        text++;
+        text++; //next in the string
     }
 }
 
 
 // Flag variable to store detected action number
-volatile int bit_action_flag = -1;
+volatile int bit_action_flag = -1; //flag for system error
 
 // Hold previous value of the Bit flag
-volatile int bit_prev_flag = -1;
+volatile int bit_prev_flag = -1; //holding the flag for checking
 
 // Monitor Bits of gpio pins and determine if the reading is accurate and set a flag for trigger
 void vTaskMonitorBits(void *pvParameters) {
-    // Internal count variable for the number of times read the same value
-    int count = 1;
+   
+    int count = 1;// Internal count variable for the number of times read the same value
 
-    // Decimal Value to represent the value of the bits in decimal
-    int decimal_value = 0;
+    
+    int decimal_value = 0; // Decimal Value to represent the value of the bits in decimal
 
-    // Variable responsible for holding the last value of the decimal value
-    int prev_decimal_value = -1;
+    
+    int prev_decimal_value = -1; // Variable responsible for holding the last value of the decimal value
 
-    // Infinte while to loop till an action flag is triggered
-    while (1) {
+    
+    while (1) { // Infinte while to loop till an action flag is triggered
 
-        // Initial if statement to check if the bit_action_flag is in its orgrinal state -1
-        if(bit_action_flag == -1){
+        
+        if(bit_action_flag == -1){// Initial if statement to check if the bit_action_flag is in its orgrinal state -1
 
-            //reset the decimal value to zero at begining of every loop
-            decimal_value = 0;
+            
+            decimal_value = 0; //reset the decimal value to zero at begining of every loop
 
-            // Read the state of each GPIO pin and calculate the decimal value
-            for (int i = 0; i < NUM_PINS; i++) {
-                int state = gpio_get_level(pins[i]);
+            
+            for (int i = 0; i < NUM_PINS; i++) {// Read the state of each GPIO pin and calculate the decimal value
+                int state = gpio_get_level(pins[i]); //initial state of the IO pin 
                 decimal_value |= (state << i);  // Combine the bits to form the binary number
             }
 
@@ -503,32 +503,28 @@ void vTaskMonitorBits(void *pvParameters) {
                gpio_get_level(pins[2]),  // Bit2
                gpio_get_level(pins[1]),  // Bit1
                gpio_get_level(pins[0]),  // LSB (Bit0)
-               decimal_value);
+               decimal_value); // print statement for the binary value
             
             // Check if the current value matches the previous value
-            if (decimal_value == prev_decimal_value) {
+            if (decimal_value == prev_decimal_value) { //function definition
                 count++; // Increment the counter
             } 
-            // Else reset the count to 1
-            else {
+            
+            else { // Else reset the count to 1
                 count = 1; // Reset the counter if the value changes
             }
 
-            // Update the previous value
-            prev_decimal_value = decimal_value;
+            prev_decimal_value = decimal_value; // Update the previous value
 
             // if condition that checks to see if bit_action_flag needs to be set 
             // checks if the previous flag is not the same as current, dont do action on zero, and make sure there was a count of 3
             if(bit_prev_flag != decimal_value && decimal_value !=0 && (count >=3)){
-                // set bit flag to the new decimal value
-                bit_action_flag = decimal_value;
+                bit_action_flag = decimal_value; // set bit flag to the new decimal value
             }
-            // Delay before next reading
-            vTaskDelay(pdMS_TO_TICKS(5000));
+            vTaskDelay(pdMS_TO_TICKS(5000)); // Delay before next reading
         }
         else{
-            // Suspend task if a flag is triggered
-            vTaskSuspend(NULL);
+            vTaskSuspend(NULL);// Suspend task if a flag is triggered
         } 
     } 
 }
