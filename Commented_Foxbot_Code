@@ -233,33 +233,33 @@ void test_write_and_verify() { // Function to test writing to and reading back f
     }
 }
 
-void set_bit(uint8_t reg, uint8_t bit) {
-    if (bit > 7) {
-        ESP_LOGE(TAG, "Invalid bit position. Bit must be between 0 and 7.");
-        return;
+void set_bit(uint8_t reg, uint8_t bit) { //function to set a specific bit in an 8-bit register
+    if (bit > 7) { // check id the bit position is valid 
+        ESP_LOGE(TAG, "Invalid bit position. Bit must be between 0 and 7."); // log an error if the bit position is invalid
+        return; // return the error
     }
 
-    uint8_t reg_value;
-    esp_err_t err;
+    uint8_t reg_value; // to store the current register value
+    esp_err_t err; // to store error codes from register operations
 
     // Step 1: Read the current value of the register
-    err = rdAFE(reg, &reg_value, 1);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to read register 0x%02X: %s", reg, esp_err_to_name(err));
-        return;
+    err = rdAFE(reg, &reg_value, 1); // we are reading 1 byte
+    if (err != ESP_OK) { // check if the read operation failed
+        ESP_LOGE(TAG, "Failed to read register 0x%02X: %s", reg, esp_err_to_name(err)); //log an error with the register address and error description
+        return; // exit the function if read failed
     }
-    ESP_LOGI(TAG, "Current register 0x%02X value: 0x%02X", reg, reg_value);
+    ESP_LOGI(TAG, "Current register 0x%02X value: 0x%02X", reg, reg_value); // log the current register value for debugging
 
     // Step 2: Set the specified bit to 1
     reg_value |= (1 << bit);  // Set the bit at the specified position
 
     // Step 3: Write the modified value back to the register
-    err = wrAFE(reg, &reg_value, 1);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to write register 0x%02X: %s", reg, esp_err_to_name(err));
-        return;
+    err = wrAFE(reg, &reg_value, 1); // wrAFE writes the new value back to the register 
+    if (err != ESP_OK) { // check if the write operation failed
+        ESP_LOGE(TAG, "Failed to write register 0x%02X: %s", reg, esp_err_to_name(err)); //log an error with the regsiter
+        return; // exit the function
     }
-    ESP_LOGI(TAG, "Bit %d set. New register 0x%02X value: 0x%02X", bit, reg, reg_value);
+    ESP_LOGI(TAG, "Bit %d set. New register 0x%02X value: 0x%02X", bit, reg, reg_value); //log success message showing which bit was set 
 }
 
 
@@ -268,142 +268,142 @@ void set_bit(uint8_t reg, uint8_t bit) {
  * @param reg The register address (e.g., SYS_STAT, SYS_CTRL1, etc.).
  * @return The value of the register, or 0xFF if the read operation fails.
  */
-uint8_t read_register(uint8_t reg) {
+uint8_t read_register(uint8_t reg) { // function to read the value form an 8-bit register
     uint8_t reg_value = 0xFF;  // Default value in case of read failure
-    esp_err_t err;
+    esp_err_t err; // variable to store error codes from register operations
 
     // Step 1: Read the current value of the register
-    err = rdAFE(reg, &reg_value, 1);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to read register 0x%02X: %s", reg, esp_err_to_name(err));
+    err = rdAFE(reg, &reg_value, 1); //the '1' parameter likely indicates we're reading 1 byte
+    if (err != ESP_OK) { //check if the read operation failed
+        ESP_LOGE(TAG, "Failed to read register 0x%02X: %s", reg, esp_err_to_name(err)); //log an error
     }
     /*else {
         // Log the register address and its value in hex format
         ESP_LOGI(TAG, "Read register 0x%02X: 0x%02X", reg, reg_value);
     }*/
-    return reg_value;
-    vTaskDelay(pdMS_TO_TICKS(500));
+    return reg_value; // return the register value
+    vTaskDelay(pdMS_TO_TICKS(500)); // set some delay
 }
 
 // Function to read the cell voltage
-float read_cell_voltage(uint8_t vc_hi_addr, uint8_t vc_low_addr) {
+float read_cell_voltage(uint8_t vc_hi_addr, uint8_t vc_low_addr) { // combines two 8-bit registers
     // Read the values of VC_HI and VC_LOW registers
-    uint8_t vc_hi = read_register(vc_hi_addr);
-    uint8_t vc_low = read_register(vc_low_addr);
-    printf("This is the HI: 0x%02X, and this is the Lo: 0x%02X \n", vc_hi, vc_low);
+    uint8_t vc_hi = read_register(vc_hi_addr); // read the high byte from the address
+    uint8_t vc_low = read_register(vc_low_addr); // read the low byte from the register address
+    printf("This is the HI: 0x%02X, and this is the Lo: 0x%02X \n", vc_hi, vc_low); // for debugging
 
     // Combine VC_HI and VC_LOW into a 16-bit value
-    uint16_t combined_value = (vc_hi << 8) | vc_low;
+    uint16_t combined_value = (vc_hi << 8) | vc_low; // shift the high byte left by 8 bits
 
     // Mask out bits <15:14> to use only bits <13:0>
     combined_value = combined_value & 0x3FFF; // 0x3FFF = 0b0011111111111111
 
     // Multiply the combined value by 375 microvolts (375e-6 volts)
-    float voltage = combined_value * 375e-6;
+    float voltage = combined_value * 375e-6; //multiply to get the actual voltage
 
-    return voltage;
+    return voltage; // computed voltage
 }
 // Function to read the cell voltage
-float read_bat_voltage(uint8_t vc_hi_addr, uint8_t vc_low_addr) {
+float read_bat_voltage(uint8_t vc_hi_addr, uint8_t vc_low_addr) { // rad battery voltage
     // Read the values of VC_HI and VC_LOW registers
-    uint8_t vc_hi = read_register(vc_hi_addr);
-    uint8_t vc_low = read_register(vc_low_addr);
-    printf("This is the HI: 0x%02X, and this is the Lo: 0x%02X \n", vc_hi, vc_low);
+    uint8_t vc_hi = read_register(vc_hi_addr); //read the high byte
+    uint8_t vc_low = read_register(vc_low_addr); // read the low byte
+    printf("This is the HI: 0x%02X, and this is the Lo: 0x%02X \n", vc_hi, vc_low); // for debugging
 
     // Combine VC_HI and VC_LOW into a 16-bit value
-    uint16_t combined_value = (vc_hi << 8) | vc_low;
+    uint16_t combined_value = (vc_hi << 8) | vc_low; //shift the high byte left
 
     // Multiply the combined value by 375 microvolts (375e-6 volts)
-    float voltage = combined_value * 375e-6;
+    float voltage = combined_value * 375e-6; // computing the voltage
 
-    return voltage;
+    return voltage; // return the computed voltage
 }
 
-static void afe_init()
+static void afe_init() // reads and prints the system status register
 { 
 
-    printf("This is sys_STAT:  0x%02X \n", read_register(SYS_STAT));   
-    float voltage = read_cell_voltage(VC1_HI, VC1_LO);
-    printf("Cell 1 Voltage: %f V\n", voltage);
-    printf("This is battery Voltage: %f V \n", read_bat_voltage(BAT_HI, BAT_LO));
+    printf("This is sys_STAT:  0x%02X \n", read_register(SYS_STAT)); // debugging: display the register value
+    float voltage = read_cell_voltage(VC1_HI, VC1_LO); // read cell 1 voltage 
+    printf("Cell 1 Voltage: %f V\n", voltage); // for debugging
+    printf("This is battery Voltage: %f V \n", read_bat_voltage(BAT_HI, BAT_LO)); // read and print out the battery voltage
     
 }
 
-void i2c_init() {
-    i2c_config_t conf = {0};  
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = I2C_SDA_IO;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = I2C_SCL_IO;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = I2C_FREQ_HZ;
+void i2c_init() { // sets up the I2C in master mode
+    i2c_config_t conf = {0}; // configure the I2C in master mode
+    conf.mode = I2C_MODE_MASTER; // set as I2C master
+    conf.sda_io_num = I2C_SDA_IO; //SDA pin
+    conf.sda_pullup_en = GPIO_PULLUP_ENABLE; //enable the internal pull-up
+    conf.scl_io_num = I2C_SCL_IO; //SCL pin
+    conf.scl_pullup_en = GPIO_PULLUP_ENABLE; //enable the internal pull-up
+    conf.master.clk_speed = I2C_FREQ_HZ; // set I2C clock speed
     
-    esp_err_t err = i2c_param_config(I2C_PORT_NUM, &conf);
-    if (err != ESP_OK) {
-        ESP_LOGE("I2C", "i2c_param_config failed: %s", esp_err_to_name(err));
-        return;
+    esp_err_t err = i2c_param_config(I2C_PORT_NUM, &conf); // apply the I2C configuration
+    if (err != ESP_OK) { // checking if there is an error
+        ESP_LOGE("I2C", "i2c_param_config failed: %s", esp_err_to_name(err)); // print code
+        return; // reuturn the error message
     }
 
-    err = i2c_driver_install(I2C_PORT_NUM, I2C_MODE_MASTER, 0, 0, 0);
-    if (err != ESP_OK) {
-        ESP_LOGE("I2C", "i2c_driver_install failed: %s", esp_err_to_name(err));
+    err = i2c_driver_install(I2C_PORT_NUM, I2C_MODE_MASTER, 0, 0, 0); //install I2C driver
+    if (err != ESP_OK) { // checking if there is an error
+        ESP_LOGE("I2C", "i2c_driver_install failed: %s", esp_err_to_name(err)); // print out message if bad
     } else {
-        ESP_LOGI("I2C", "I2C initialized successfully!");
+        ESP_LOGI("I2C", "I2C initialized successfully!");//print out message if good
     }
 }
 
-void i2c_scanner() {
-    ESP_LOGI(TAG, "Scanning I2C bus...");
-    for (uint8_t addr = 0x01; addr < 0x7F; addr++) {
-        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-        i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, (addr << 1) | WRITE_BIT, ACK_CHECK_EN);
-        i2c_master_stop(cmd);
-        esp_err_t ret = i2c_master_cmd_begin(I2C_PORT_NUM, cmd, 1000 / portTICK_PERIOD_MS);
-        i2c_cmd_link_delete(cmd);
-        if (ret == ESP_OK) {
-            ESP_LOGI(TAG, "Found device at address: 0x%02X", addr);
+void i2c_scanner() { // scans all I2C addresses 
+    ESP_LOGI(TAG, "Scanning I2C bus..."); // print out message
+    for (uint8_t addr = 0x01; addr < 0x7F; addr++) { //loop through possible I2C addresses
+        i2c_cmd_handle_t cmd = i2c_cmd_link_create(); //handle function
+        i2c_master_start(cmd); // send start condition
+        i2c_master_write_byte(cmd, (addr << 1) | WRITE_BIT, ACK_CHECK_EN); // send address and write bit
+        i2c_master_stop(cmd); // send stop command
+        esp_err_t ret = i2c_master_cmd_begin(I2C_PORT_NUM, cmd, 1000 / portTICK_PERIOD_MS); // execute the command and check fro acknowledgment
+        i2c_cmd_link_delete(cmd); // free command handle
+        if (ret == ESP_OK) { // if device responds 
+            ESP_LOGI(TAG, "Found device at address: 0x%02X", addr); // logs the address
         }
     }
-    ESP_LOGI(TAG, "Scan complete.");
+    ESP_LOGI(TAG, "Scan complete."); // setup complete
 }
 
 
 // Sine wave lookup table
-uint8_t sineTable[SINE_RESOLUTION];
+uint8_t sineTable[SINE_RESOLUTION]; //precomputed sine wave for DAC output
 
 // Morse code lookup table
-const char *morseCode[37] = {
+const char *morseCode[37] = { //Morse representations
     ".-", "-...", "-.-.", "-..", ".", "..-.", "--.", "....", "..", ".---", "-.-", ".-..", "--", "-.", "---", ".--.", "--.-", ".-.", "...", "-", "..-", "...-", ".--", "-..-", "-.--", "--..", // A-Z
     "-----", ".----", "..---", "...--", "....-", ".....", "-....", "--...", "---..", "----.", // 0-9
     ".-.-.-" // .
 };
 
 // Generate sine wave lookup table
-void generateSineTable() {
-    for (int i = 0; i < SINE_RESOLUTION; i++) {
-        sineTable[i] = (uint8_t)(127.5 + 127.5 * sin(2 * M_PI * i / SINE_RESOLUTION));
+void generateSineTable() { //function definition
+    for (int i = 0; i < SINE_RESOLUTION; i++) { //does through the sine wave
+        sineTable[i] = (uint8_t)(127.5 + 127.5 * sin(2 * M_PI * i / SINE_RESOLUTION)); // computes the 256-point sine wave
     }
 }
 
 // Initialize DAC
-void dac_init() {
+void dac_init() { // function definition
     dac_output_enable(DAC_PIN); // Enable DAC channel
 }
 
 // Output a value to the DAC
-void dac_output(uint8_t value) {
+void dac_output(uint8_t value) { // function definition
     dac_output_voltage(DAC_PIN, value); // Set DAC output voltage (0-255)
 }
 
 // Initialize LED
-void led_init() {
+void led_init() { // function definitino 
     gpio_reset_pin(LED_PIN); // Reset the LED pin
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT); // Set LED pin as output
 }
 
 // Initialize transistor pin
-void trans_init() {
+void trans_init() { // function definiition
     gpio_reset_pin(Trans); // Reset the LED pin
     gpio_set_direction(Trans, GPIO_MODE_OUTPUT); // Set LED pin as output
 }
