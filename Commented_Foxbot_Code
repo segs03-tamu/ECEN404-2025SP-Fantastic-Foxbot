@@ -518,7 +518,7 @@ void vTaskMonitorBits(void *pvParameters) {
 
             // if condition that checks to see if bit_action_flag needs to be set 
             // checks if the previous flag is not the same as current, dont do action on zero, and make sure there was a count of 3
-            if(bit_prev_flag != decimal_value && decimal_value !=0 && (count >=3)){
+            if(bit_prev_flag != decimal_value && decimal_value !=0 && (count >=3)){ // function definition 
                 bit_action_flag = decimal_value; // set bit flag to the new decimal value
             }
             vTaskDelay(pdMS_TO_TICKS(5000)); // Delay before next reading
@@ -530,17 +530,17 @@ void vTaskMonitorBits(void *pvParameters) {
 }
 
 // Initialize transistor pin
-void bit_init() {
-    // Configure the GPIO pins as inputs
-    gpio_config_t io_conf;
+void bit_init() { //function definition
+    
+    gpio_config_t io_conf;// Configure the GPIO pins as inputs
     io_conf.intr_type = GPIO_INTR_DISABLE;  // Disable interrupt
     io_conf.mode = GPIO_MODE_INPUT;         // Set as input mode
     io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;  // Disable pull-down
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;      // Disable pull-up
 
-    for (int i = 0; i < NUM_PINS; i++) {
-        io_conf.pin_bit_mask = (1ULL << pins[i]);
-        gpio_config(&io_conf);
+    for (int i = 0; i < NUM_PINS; i++) { //for the number of IO pins
+        io_conf.pin_bit_mask = (1ULL << pins[i]); //configuring each pin
+        gpio_config(&io_conf); //IO pin?
     }
 }
 
@@ -551,241 +551,241 @@ TaskHandle_t xTaskBitMonitor = NULL; // Declare a variable to store the task han
 
 void every_int(){
     /*
-    vTaskDelay(pdMS_TO_TICKS(500));
-    i2c_init();
-    vTaskDelay(pdMS_TO_TICKS(500));
-    wake_up_bq76920();
-    vTaskDelay(pdMS_TO_TICKS(500));
-    i2c_scanner();
-    vTaskDelay(pdMS_TO_TICKS(500));
+    vTaskDelay(pdMS_TO_TICKS(500)); //delay
+    i2c_init(); // initializes the i2c communication
+    vTaskDelay(pdMS_TO_TICKS(500)); //delay
+    wake_up_bq76920(); //wakes up the battery monitor 
+    vTaskDelay(pdMS_TO_TICKS(500)); //delay
+    i2c_scanner(); //scans the i2c bus to detect connected devices
+    vTaskDelay(pdMS_TO_TICKS(500)); //dealy
     
     //printf("This is working");
     
-    afe_init();
+    afe_init(); //analog front end initialization for the battery monitor 
     
       
     */
 
-    // Initialize DAC
-    dac_init(); 
+    
+    dac_init(); // Initialize DAC
 
-    // Initialize LED
-    led_init();
+    
+    led_init();// Initialize LED
 
-    // Intialize PTT transistor gpio
-    trans_init();
+    
+    trans_init(); // Intialize PTT transistor gpio
 
-    //Intialize gpio bits 0-3 
-    bit_init();
+     
+    bit_init(); //Intialize gpio bits 0-3
 
-    // Generate sine wave lookup table
-    generateSineTable();
+    
+    generateSineTable(); // Generate sine wave lookup table
 
     
 }
 
 #define UART_NUM        UART_NUM_1  // Use UART1 for MAVLink
-#define TX_PIN          17
-#define RX_PIN          16
-#define BAUD_RATE       57600
+#define TX_PIN          17 //IO pin number for TX
+#define RX_PIN          16 //IO pin for RX
+#define BAUD_RATE       57600 //baud rate for i2c communication
 #define MAV_SYSTEM_ID   1   // Pixhawk system ID
 #define ESP_SYSTEM_ID   255 // ESP32 system ID
 #define MAV_COMP_ID     0   // Target component (autopilot)
 
-// Debugging tag
-static const char *TAGG = "MAVLINK_ESP32";
+
+static const char *TAGG = "MAVLINK_ESP32"; // Debugging tag
 
 // Function to initialize UART for MAVLink
-void init_uart() {
-    uart_config_t uart_config = {
-        .baud_rate = BAUD_RATE,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-        .source_clk = UART_SCLK_DEFAULT
+void init_uart() { //functino definition
+    uart_config_t uart_config = { //configuring the uart communication
+        .baud_rate = BAUD_RATE, //aligning the baud rates
+        .data_bits = UART_DATA_8_BITS, //aligning the bits
+        .parity = UART_PARITY_DISABLE, //defining the parity bits
+        .stop_bits = UART_STOP_BITS_1, //one stop bit per frame
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE, //no hardware flow control
+        .source_clk = UART_SCLK_DEFAULT //default clock 
     };
 
-    uart_driver_install(UART_NUM, 512, 0, 0, NULL, 0);
-    uart_param_config(UART_NUM, &uart_config);
-    uart_set_pin(UART_NUM, TX_PIN, RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    uart_driver_install(UART_NUM, 512, 0, 0, NULL, 0); //installing the driver
+    uart_param_config(UART_NUM, &uart_config); //configuring communication
+    uart_set_pin(UART_NUM, TX_PIN, RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE); //setting the pins based on ESP
 
-    ESP_LOGI(TAGG, "UART initialized for MAVLink");
+    ESP_LOGI(TAGG, "UART initialized for MAVLink"); //display when mavlink is completed
 }
 
 // Function to send an ARM/DISARM command to Pixhawk
-void send_arm_disarm(bool arm) {
-    mavlink_message_t msg;
-    uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+void send_arm_disarm(bool arm) { //sends mavlink arm/disarm command to a flight controller
+    mavlink_message_t msg; //mavlink message structure to hold the enconded command
+    uint8_t buf[MAVLINK_MAX_PACKET_LEN]; //buffer to store the raw bytes of the message 
 
-    mavlink_msg_command_long_pack(
-        ESP_SYSTEM_ID, MAV_COMP_ID, &msg,
-        MAV_SYSTEM_ID, MAV_COMP_ID,
+    mavlink_msg_command_long_pack( //pack the arm/disarm command into a mavlink message
+        ESP_SYSTEM_ID, MAV_COMP_ID, &msg, //ESP ID, autopilot, pointer to mavlink message to store result 
+        MAV_SYSTEM_ID, MAV_COMP_ID, //flight controller ID, flight controller ID
         MAV_CMD_COMPONENT_ARM_DISARM, // MAVLink command to ARM/DISARM
         0,  // Confirmation
         arm ? 1 : 0,  // Param1: 1 to arm, 0 to disarm
         0, 0, 0, 0, 0, 0  // Unused parameters
     );
 
-    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-    uart_write_bytes(UART_NUM, buf, len);
+    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg); //convert the mavlink message to a byte buffer
+    uart_write_bytes(UART_NUM, buf, len); //send the raw bytes over UAR to the flight controller
     
-    ESP_LOGI(TAGG, "Sent MAVLink %s command", arm ? "ARM" : "DISARM");
+    ESP_LOGI(TAGG, "Sent MAVLink %s command", arm ? "ARM" : "DISARM"); //log the action for debugging
 }
 
 
-void request_mavlink_data() {
-    mavlink_message_t msg;
-    uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+void request_mavlink_data() { //configures the pixhawk to send gps updates at 10Hz (every 100ms)
+    mavlink_message_t msg; //mavlink message structure to hold the command
+    uint8_t buf[MAVLINK_MAX_PACKET_LEN]; //buffer to store raw bytes of the mavlink message
 
-    mavlink_msg_command_long_pack(
+    mavlink_msg_command_long_pack( //pacl command to request regular position updates
         255, 0, &msg,   // ESP32 as sender
         1, 0,           // Pixhawk system ID and component ID
-        MAV_CMD_SET_MESSAGE_INTERVAL, 
+        MAV_CMD_SET_MESSAGE_INTERVAL,  //command ID
         0, 
         MAVLINK_MSG_ID_GLOBAL_POSITION_INT, // Request GPS data
         100000,  // Send every 100ms (10Hz)
         0, 0, 0, 0, 0  // Unused
     );
 
-    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-    uart_write_bytes(UART_NUM, buf, len);
+    uint16_t len = mavlink_msg_to_send_buffer(buf, &msg); //serialize the mavlink message into a byte buffer
+    uart_write_bytes(UART_NUM, buf, len); //send the command via UART to the pixhawk
     
-    ESP_LOGI("MAVLINK", "Requested MAVLink GPS Data from Pixhawk");
+    ESP_LOGI("MAVLINK", "Requested MAVLink GPS Data from Pixhawk"); //log the action
 }
 
 
 // Function to process received MAVLink messages
-void process_mavlink_message(mavlink_message_t *msg) {
-    if (msg->msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT) {
-        mavlink_global_position_int_t gps;
-        mavlink_msg_global_position_int_decode(msg, &gps);
+void process_mavlink_message(mavlink_message_t *msg) { //going to use pointer to the received mavlink message
+    if (msg->msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT) { //check if the message is a gps update
+        mavlink_global_position_int_t gps; //structure to store decoded gps data
+        mavlink_msg_global_position_int_decode(msg, &gps); //decode the mavlink message into gps structure
 
         // Convert latitude & longitude from 1E7 format to decimal degrees
-        float lat = gps.lat / 1e7;
-        float lon = gps.lon / 1e7;
+        float lat = gps.lat / 1e7; //format to degrees
+        float lon = gps.lon / 1e7; //format to degrees
         float alt = gps.alt / 1000.0;  // Convert mm to meters
 
-        ESP_LOGI(TAGG, "GPS: Lat: %.7f, Lon: %.7f, Alt: %.2f m", lat, lon, alt);
+        ESP_LOGI(TAGG, "GPS: Lat: %.7f, Lon: %.7f, Alt: %.2f m", lat, lon, alt); //log the gps coordinates
     }
     else {
-        ESP_LOGW(TAGG, "MAVLink message received, but not GPS data (ID: %d)", msg->msgid);
+        ESP_LOGW(TAGG, "MAVLink message received, but not GPS data (ID: %d)", msg->msgid); //warning for non-gps messages
     }
 }
 
 // Task to receive and parse MAVLink messages
-void receive_mavlink_task(void *pvParameters) {
-    uint8_t data;
-    mavlink_message_t msg;
-    mavlink_status_t status;
-    ESP_LOGI(TAGG, "GPS initialized for MAVLink: begin parsing");
+void receive_mavlink_task(void *pvParameters) { //continuously receive and parse mavlink message 
+    uint8_t data; //single byte buffer for uart reads
+    mavlink_message_t msg; //mavlink message structure
+    mavlink_status_t status; //mavlink parser status
+    ESP_LOGI(TAGG, "GPS initialized for MAVLink: begin parsing"); //output message
 
-    while (1) {
+    while (1) { //function definition
 
-        int len = uart_read_bytes(UART_NUM, &data, 1, 100 / portTICK_PERIOD_MS);
-        if (len > 0) {
-            if (mavlink_parse_char(MAVLINK_COMM_0, data, &msg, &status)) {
-                process_mavlink_message(&msg);
-                ESP_LOGI(TAG, "Received MAVLink Message ID: %d", msg.msgid);
+        int len = uart_read_bytes(UART_NUM, &data, 1, 100 / portTICK_PERIOD_MS); //read 1 byte from uart with 100ms timeout
+        if (len > 0) { //for a non-zero length
+            if (mavlink_parse_char(MAVLINK_COMM_0, data, &msg, &status)) { //parse the byte into a mavlink message
+                process_mavlink_message(&msg); //pointer to the message
+                ESP_LOGI(TAG, "Received MAVLink Message ID: %d", msg.msgid); //output message
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(1000)); //yield cpu for 1 second
     }
 }
 // Responsible for determing what each digit does and how to react
-void num_actions(int num_val){
+void num_actions(int num_val){ //executes actions based on numberic input (1-9)
     //char message[20];  // Adjust the size as needed
 
     //Enable push to talk
-    gpio_set_level(Trans, 1);
+    gpio_set_level(Trans, 1); //set the io pin high when wanting to transmit 
     vTaskDelay(pdMS_TO_TICKS(1000));        //Pause for time     
 
     // If else block for each of the digits
-    if(bit_action_flag == 1){      
+    if(bit_action_flag == 1){ //action selector       
         // playMorseString("One", FREQUENCY); 
         send_arm_disarm(true);  // ARM the Pixhawk
 
         /*
-        printf("Executing Action %d, reading Cell1 Voltage \n", bit_action_flag);
+        printf("Executing Action %d, reading Cell1 Voltage \n", bit_action_flag); //output
         // Read the voltage of Cell 1
-        float voltage = read_cell_voltage(VC1_HI, VC1_LO);
+        float voltage = read_cell_voltage(VC1_HI, VC1_LO); //read the voltage of cell 1
         // Convert the voltage value to a string
-        snprintf(message, sizeof(message), "%.2f", voltage);
+        snprintf(message, sizeof(message), "%.2f", voltage); //convert the voltage to a string
 
         // Log the voltage value for debugging
-        printf("Cell 1 Voltage: %s V\n", message);
+        printf("Cell 1 Voltage: %s V\n", message); //log the voltage for debugging
             
         // Play Morse code message
-        playMorseString(message, FREQUENCY);
+        playMorseString(message, FREQUENCY); //play morse code
         */   
     }
-    else if(bit_action_flag == 2){      
+    else if(bit_action_flag == 2){ //action for 2      
         // playMorseString("Two", FREQUENCY);  
         send_arm_disarm(false);  // ARM the Pixhawk
   
     }
-    else if(bit_action_flag == 3){      
+    else if(bit_action_flag == 3){      //action 3
         playMorseString("Three", FREQUENCY);    
     }
-    else if(bit_action_flag == 4){      
+    else if(bit_action_flag == 4){      //action for 4
         playMorseString("Four", FREQUENCY);    
     }
-    else if(bit_action_flag == 5){      
+    else if(bit_action_flag == 5){      //action for 5
         playMorseString("Five", FREQUENCY);    
     }
-    else if(bit_action_flag == 6){      
+    else if(bit_action_flag == 6){    //action for 6  
         playMorseString("Six", FREQUENCY);    
     }
-    else if(bit_action_flag == 7){      
+    else if(bit_action_flag == 7){    //action for 7  
         playMorseString("Seven", FREQUENCY);    
     }
-    else if(bit_action_flag == 8){      
+    else if(bit_action_flag == 8){      //action for 8
         playMorseString("Eight", FREQUENCY);    
     }
-    else if(bit_action_flag == 9){      
+    else if(bit_action_flag == 9){      //action for 9
         playMorseString("Nine", FREQUENCY);    
     }
     else{
-        printf("Not an actionable task \n");
-        bit_action_flag = 0;
+        printf("Not an actionable task \n"); //not correct tone sent
+        bit_action_flag = 0; //flag is changed from 1 to 0
     }
 
-    // Wait time
-    vTaskDelay(pdMS_TO_TICKS(1000));
 
-    // Disable PTT gpio
-    gpio_set_level(Trans, 0);
+    vTaskDelay(pdMS_TO_TICKS(1000)); //wait time
 
-    // Wait time
-    vTaskDelay(pdMS_TO_TICKS(1000));
 
-    // Store value of action flag in a previous flag 
-    bit_prev_flag = bit_action_flag;
+    gpio_set_level(Trans, 0); //turn off ptt
 
-    // Reset the bit action flag
-    bit_action_flag = -1;
+
+    vTaskDelay(pdMS_TO_TICKS(1000)); //wait time
+
+
+    bit_prev_flag = bit_action_flag; // Store value of action flag in a previous flag
+
+    
+    bit_action_flag = -1; // Reset the bit action flag
         
-    // Resume the TaskBitMonitor 
-    vTaskResume(xTaskBitMonitor);
+     
+    vTaskResume(xTaskBitMonitor); // Resume the TaskBitMonitor
 }
 
 void app_main() {
     // Intialize everything we need
-    every_int();
-    init_uart();
+    every_int(); //initialize everything 
+    init_uart(); //initialize the uart communication
 
-    //Create task to monitor bits, defined xTaskBitMonitor
-    xTaskCreate(vTaskMonitorBits, "Bit Monitor Task", 2048, NULL, 5, &xTaskBitMonitor);
     
-    while (1) {
+    xTaskCreate(vTaskMonitorBits, "Bit Monitor Task", 2048, NULL, 5, &xTaskBitMonitor); //Create task to monitor bits, defined xTaskBitMonitor
+    
+    while (1) { //while the system is running
 
-        // Checks if bit action is needed
-        if(bit_action_flag != -1){
-            num_actions(bit_action_flag);
+        
+        if(bit_action_flag != -1){ // Checks if bit action is needed
+            num_actions(bit_action_flag); //complete the action based on the received tone
         }
 
-        // Delay between each reading of the bit action flag
-        vTaskDelay(pdMS_TO_TICKS(5000));
+        
+        vTaskDelay(pdMS_TO_TICKS(5000)); // Delay between each reading of the bit action flag
     }
     
 
